@@ -1,10 +1,10 @@
-# import needed packages
+# Import needed packages
 import praw
 import time
 import re
-import passwords
+import passwords # Custom file with the 3 variables specified below
 
-# creates an instance of a reddit account
+# Creates an instance of a reddit account
 thisUser = 'Cornell_class_Bot'
 
 reddit = praw.Reddit(client_id=passwords.client_id,
@@ -14,38 +14,33 @@ reddit = praw.Reddit(client_id=passwords.client_id,
                      user_agent='Made by /u/DubitablyIndubitable')
 
 subreddit = reddit.subreddit('Cornell')
-# declares neccesary global variables
+
+# Declares neccesary global variables
 checkedPosts = []
 checkedComment = []
 count = 0
 commentCount = 0
 output = ""
 
-# common 4-digit numbers mentioned in posts that could create a false-positive
+# Common 4-digit numbers mentioned in posts that could create a false-positive
 invalidNums = ['1990', '1991', '1992', '1993', '1994', '1995', '1996', '1997', '1999', '2000', '2001', '2002', '2003',
                '2004', '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016',
                '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026', '1000', '3000', '4000',
                '5000', '6000']
 
-# removes duplicate numbers from lists. Used incase the class number is mentioned multiple times in a post
-
-
+# Removes duplicate numbers from lists. Used incase the class number is mentioned multiple times in a post
 def remove_duplicates(x):
     return list(set(x))
 
-# removes the commonly mentioned 4-digit numbers listed above from the numbers detected to be classes
-
-
+# Removes the commonly mentioned 4-digit numbers listed above from the numbers detected to be classes
 def remove_nums(x):
     for num in x:
         if num in invalidNums:
             x.remove(num)
     return x
 
-# finds posts containing the same class mentioned in the original post by ensuring the class number appears in the
-# to-be recommended post's title and comment section
-
-
+# Finds posts containing the same class mentioned in the original post by ensuring
+# the class number appears in the to-be recommended post's title and comment section
 def find_posts(classes, url, num):
     global checkedPosts
     global checkedComment
@@ -64,18 +59,14 @@ def find_posts(classes, url, num):
                         break
     return output
 
-# function to check if the comments of a post contain a comment by this bot
-
-
+# Function to check if the comments of a post contain a comment by this bot
 def hasCommented(post):
     for comment in post.comments:
         if comment.author == thisUser:
             return True
     return False
 
-# function to check if the bot has replied to a comment
-
-
+# Function to check if the bot has replied to a comment
 def hasReplied(comment):
     for reply in comment.replies:
         if reply.author == thisUser:
@@ -83,7 +74,7 @@ def hasReplied(comment):
     return False
 
 
-# reply to all comments invoking classbot
+# Reply to all comments invoking classbot
 def reply():
     global checkedPosts
     global checkedComment
@@ -103,7 +94,7 @@ def reply():
                         print("This is the " + str(commentCount) + "th comment!")
                     output = ""
 
-#comment on most recent posts containing a 4-digit number
+# Comment on most recent posts containing a 4-digit number
 def comment():
     global checkedPosts
     global checkedComment
@@ -112,7 +103,8 @@ def comment():
     global output
     for submission in reddit.subreddit('cornell').new(limit=25):
         if not hasCommented(submission):
-            keyphrase = remove_nums(remove_duplicates(re.findall(r'\d{4}', submission.title + " " + submission.selftext)))
+            keyphrase = remove_nums(remove_duplicates(re.findall(r'\d{4}',
+                                    submission.title + " " + submission.selftext)))
             if len(keyphrase) != 0 and submission.url not in checkedPosts:
                 checkedPosts = [submission.url] + checkedPosts
                 if (len(checkedPosts) > 30):
@@ -125,13 +117,19 @@ def comment():
                 commentCount = commentCount + 1
                 print("This is the " + str(commentCount) + "th comment!")
             output = ""
-    
-# loop to constantly check the most recent 25 posts to see if it's neccesary for the bot to comment
-while 1 == 1:
+
+# Remove comments from the past num_to_check with a score below threshold.
+# Set num_to_check to None to check all comments
+def remove_bad_comments(threshold=0, num_to_check=15):
+    user = reddit.redditor(thisUser)
+    for comment in user.comments.new(limit=num_to_check):
+        if comment.score < threshold:
+            comment.delete()
+
+# Loop to constantly check the most recent 25 posts to see if it's neccesary for the bot to comment
+while True:
     comment()
     reply()
+    remove_bad_comments()
     print("Sleeping now")
     time.sleep(300)
-
-
-
