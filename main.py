@@ -127,7 +127,7 @@ def comment():
             output = ""
     
 # loop to constantly check the most recent 25 posts to see if it's neccesary for the bot to comment
-while 1 == 1:
+while True:
     comment()
     reply()
     print("Sleeping now")
